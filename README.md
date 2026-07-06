@@ -216,67 +216,158 @@ DeviceNetworkEvents
 
 ---
 
+***FLAG 12 – Performance Review Access Validation***
 
-**Objective:**  
+**Objective:** Confirm access to employee performance review material through user-level tooling.
 
-**Flag:**
+**Flag:** `2025-12-03T07:25:15.6288106Z`
+```
+DeviceProcessEvents
+| where DeviceName == "sys1-dept"
+| where TimeGenerated between (datetime(2025-12-01) .. datetime(2025-12-31))
+| where ProcessCommandLine has_any ("employee", "review", "performance")
+| project TimeGenerated, DeviceName, FileName, ProcessCommandLine
+| order by TimeGenerated desc 
+```
+<img width="952" height="76" alt="image" src="https://github.com/user-attachments/assets/02c8426c-319e-4607-a709-940b245d1391" />
 
+---
 
+***FLAG 13 – Approved/Final Bonus Artifact Access***
 
-**Objective:**  
+**Objective:** Confirm access to a finalized year-end bonus artifact with sensitive-read classification.
 
-**Flag:**
+**Flag:** `2025-12-03T07:25:39.1653621Z`
+```
+DeviceEvents
+| where DeviceName == "sys1-dept"
+| where TimeGenerated between (datetime(2025-12-01) .. datetime(2025-12-31))
+| where ActionType == "SensitiveFileRead"
+| project TimeGenerated, AccountSid, DeviceName, ActionType, FileName
+| order by TimeGenerated desc 
+```
+<img width="902" height="75" alt="image" src="https://github.com/user-attachments/assets/c97e9968-255b-456f-9dd3-5b5b3f695969" />
 
+---
 
+***FLAG 14 – Candidate Archive Creation Location***
 
-**Objective:**  
+**Objective:** Identify where a suspicious candidate-related archive was created.
 
-**Flag:**
+**Flag:** `C:\Users\5y51-D3p7\Documents\Q4Candidate_Pack.zip`
+```
+DeviceFileEvents
+| where DeviceName == "sys1-dept"
+| where TimeGenerated between (datetime(2025-12-01) .. datetime(2025-12-6))
+| where FileName has_any (".zip")
+| project TimeGenerated, DeviceName, ActionType, FileName, FolderPath, InitiatingProcessCommandLine
+| order by TimeGenerated desc 
+```
+<img width="1202" height="82" alt="image" src="https://github.com/user-attachments/assets/672d298b-6706-48c2-93d2-b3b88aa53a4b" />
 
+---
 
+***FLAG 15 – Outbound Transfer Attempt Timestamp***
 
+**Objective:** Confirm an outbound transfer attempt occurred after staging activity.
 
-**Objective:**  
+**Flag:** `2025-12-03T07:26:28.5959592Z`
+```
+DeviceNetworkEvents
+| where DeviceName == "sys1-dept"
+| where TimeGenerated between (datetime(2025-12-01) .. datetime(2025-12-6))
+| project TimeGenerated, DeviceName, InitiatingProcessCommandLine, RemoteIP, RemotePort, RemoteUrl
+| order by TimeGenerated desc
+```
+<img width="822" height="80" alt="image" src="https://github.com/user-attachments/assets/3002f789-5046-4149-83b5-3d5b0f7ba9e1" />
 
-**Flag:**
+---
 
+***FLAG 16 – Local Log Clearing Attempt Evidence***
 
+**Objective:** Identify command-line evidence of attempted local log clearing.
 
+**Flag:** `"wevtutil.exe" cl Microsoft-Windows-PowerShell/Operational`
+```
+DeviceProcessEvents
+| where DeviceName == "sys1-dept"
+| where TimeGenerated between (datetime(2025-12-01) .. datetime(2025-12-6))
+| where FileName in~ ("wevtutil.exe", "powershell.exe", "pwsh.exe")
+| where ProcessCommandLine has_any ("cl","Clear-EventLog","wevtutil")
+| project TimeGenerated, DeviceName, ActionType, ProcessCommandLine
+| order by TimeGenerated desc
+```
+<img width="865" height="75" alt="image" src="https://github.com/user-attachments/assets/0902c993-ca23-49da-889f-b6fbe3e6d831" />
 
-**Objective:**  
+---
 
-**Flag:**
+***FLAG 17 – Second Endpoint Scope Confirmation***
 
+**Objective:** Identify the second endpoint involved in the chain based on similar telemetry patterns.
 
+**Flag:** `main1-srvr`
+```
+DeviceProcessEvents
+| where TimeGenerated between (datetime(2025-12-01) .. datetime(2025-12-6))
+| where ProcessCommandLine has_any ("JavierR")
+| project TimeGenerated, DeviceName, ProcessCommandLine
+| order by TimeGenerated desc
+```
+<img width="882" height="75" alt="image" src="https://github.com/user-attachments/assets/9d26b78a-7e8c-4ad7-9be2-ef474a69b87a" />
 
+---
 
-**Objective:**  
+***FLAG 18 – Approved Bonus Artifact Access on Second Endpoint***
 
-**Flag:**
+**Objective:** Confirm the approved bonus artifact is accessed again on the second endpoint.
 
+**Flag:** `2025-12-04T03:11:58.6027696Z`
+```
+DeviceProcessEvents
+| where TimeGenerated between (datetime(2025-12-03) .. datetime(2025-12-5))
+| where DeviceName == "main1-srvr"
+| project TimeGenerated, DeviceName, FileName, FolderPath, ProcessCommandLine
+| order by TimeGenerated desc
+```
+<img width="836" height="78" alt="image" src="https://github.com/user-attachments/assets/07691f83-8f6e-48b7-a9af-cd50f92f69d3" />
 
+---
 
+***FLAG 19 – Employee Scorecard Access on Second Endpoint***
 
-**Objective:**  
+**Objective:** Confirm employee-related scorecard access occurs again on the second endpoint and identify the remote session device context.
 
-**Flag:**
+**Flag:** `YE-FINANCEREVIE`
+```
+DeviceNetworkEvents
+| where DeviceName == "main1-srvr"
+| where TimeGenerated between (datetime(2025-12-01) .. datetime(2025-12-6))
+| where InitiatingProcessRemoteSessionDeviceName != ""
+| project TimeGenerated, DeviceName, InitiatingProcessRemoteSessionDeviceName, InitiatingProcessCommandLine
+| order by TimeGenerated desc
+```
+<img width="757" height="77" alt="image" src="https://github.com/user-attachments/assets/c62d8417-f19e-4d8e-9a9c-18565193b65c" />
 
+---
 
+***FLAG 20 – Staging Directory Identification on Second Endpoint***
 
+**Objective:** Identify the directory used for consolidation of internal reference materials and archived content.
 
-**Objective:**  
+**Flag:** `C:\Users\Main1-Srvr\Documents\InternalReferences\ArchiveBundles\YearEnd_ReviewPackage_2025.zip`
+```
+DeviceFileEvents
+| where DeviceName == "main1-srvr"
+| where TimeGenerated between (datetime(2025-12-01) .. datetime(2025-12-6))
+| where FileName has_any (".zip",".rar",".7z")
+| project TimeGenerated, DeviceName, FileName, FolderPath
+| order by TimeGenerated asc
+```
+<img width="1260" height="88" alt="image" src="https://github.com/user-attachments/assets/cc287d5b-31b1-4b51-bf99-d858b7a4ef2e" />
 
-**Flag:**
+---
 
-
-
-
-**Objective:**  
-
-**Flag:**
-
-
-
+***FLAG 21 – Staging Activity Timing on Second Endpoint***
 
 **Objective:**  
 
