@@ -369,25 +369,67 @@ DeviceFileEvents
 
 ***FLAG 21 – Staging Activity Timing on Second Endpoint***
 
-**Objective:**  
+**Objective:** Determine when staging activity occurred during the final phase on the second endpoint
 
-**Flag:**
+**Flag:** `2025-12-04T03:15:29.2597235Z`
+```
+DeviceFileEvents
+| where DeviceName == "main1-srvr"
+| where TimeGenerated between (datetime(2025-12-01) .. datetime(2025-12-6))
+| where FileName has_any (".zip",".rar",".7z")
+| project TimeGenerated, DeviceName, FileName, FolderPath
+| order by TimeGenerated asc
+```
+<img width="1221" height="88" alt="image" src="https://github.com/user-attachments/assets/f7e99808-2128-4c50-a19e-2b5d4d68c73f" />
+
+---
+
+***Flag 22 – Outbound Connection Remote IP (Final Phase)***
+
+**Objective:** Identify the remote IP associated with the final outbound connection attempt.
+
+**Flag:** `54.83.21.156`
+```
+DeviceNetworkEvents
+| where DeviceName == "main1-srvr"
+| where TimeGenerated between (datetime(2025-12-01) .. datetime(2025-12-6))
+| where RemoteIPType == "Public"
+| project TimeGenerated, DeviceName, ActionType, RemoteIP, RemoteUrl, RemotePort
+| order by TimeGenerated asc
+```
+<img width="776" height="76" alt="image" src="https://github.com/user-attachments/assets/d45857e7-9085-4f8d-a18a-f787394ceccf" />
+
+---
+
+## 2. Investigation Summary
+
+
+---
+
+## 3. MITRE ATT&CK Mapping
 
 
 
-**Objective:**  
+---
 
-**Flag:**
+## 4. Recommendations
 
-
-
-**Objective:**  
-
-**Flag:**
+### Immediate Actions
 
 
 
+### Short-term Remediations
 
-**Objective:**  
 
-**Flag:**
+
+### Long-term Remediations
+
+
+
+---
+
+**Report Status:** Complete  
+
+**Next Review:**  
+
+**Distribution:** Cyber Range
