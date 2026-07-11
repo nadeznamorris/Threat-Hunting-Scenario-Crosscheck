@@ -2,11 +2,11 @@
 
 ## RDP Compromise Incident
 
-**Report ID:** INC-2026-
+**Report ID:** INC-2026-3112
 
 **Analyst:** Nadezna Morris
 
-**Date:** 17-January-2026
+**Date:** 31-January-2026
 
 **Incident Date:** 
 
@@ -22,9 +22,16 @@ This threat hunt identified a multi-stage insider-driven data exfiltration event
 
 ### **Key Indicators of Compromise (IOCs):**
 
-| Type                          | Indicator                                                                 |
-| ----------------------------- | --------------------------------------------------------------------------|
-
+| Type           | Indicator                                                                                                    |
+| -------------- | -------------------------------------------------------------------------------------------------------------|
+| Host           | sys1-dept, main1-srvr                                                                                        |
+| Internal IP    | 192.168.0.110                                                                                                |
+| External IP    | 54.83.21.156                                                                                                 |
+| File/Script    | C:\Users\5y51-D3p7\Downloads\PayrollSupportTool.ps1                                                          |
+| File           | BonusMatrix_Draft_v3.xlsx, C:\Users\5y51-D3p7\Documents\Q4Candidate_Pack.zip                                 |
+| File           | C:\Users\Main1-Srvr\Documents\InternalReferences\ArchiveBundles\YearEnd_ReviewPackage_2025.zip               |
+| Scheduled Task | BonusReviewAssist                                                                                            |
+| Registry Key   | HKEY_CURRENT_USER\S-1-5-21-805396643-3920266184-3816603331-500\SOFTWARE\Microsoft\Windows\CurrentVersion\Run |
 
 ---
 
@@ -442,22 +449,34 @@ Final-phase staging on this host occurred at 2025-12-04T03:15:29.2597235Z, culmi
 
 ## 4. Recommendations
 
-### Immediate Actions
+### Immediate Actions  
 
+- Isolate sys1-dept and main1-srvr from the network pending forensic imaging.
+- Disable/reset credentials for the compromised user account and all identified remote session contexts (YE-HELPDESKTECH, YE-HRPLANNER, YE-FINANCEREVIE)
+- Block outbound traffic to 54.83.21.156 at the firewall/proxy.
+- Preserve PowerShell Operational logs, event logs, and scheduled task artifacts before further remediation (log clearing was already attempted).
+- Remove the identified persistence mechanisms — the BonusReviewAssist scheduled task and the HKCU...\Run registry entry.
 
+### Short-term Remediations  
 
-### Short-term Remediations
+- Audit and revoke unnecessary remote session/RDP access paths, particularly from 192.168.0.110 and other internal jump hosts.
+- Review and tighten access controls (ACLs) on HR/compensation shares (bonus matrices, scorecards, review materials) to least privilege.
+- Deploy AppLocker/WDAC rules to block PowerShell execution from user-writable directories (Downloads, Temp).
+- Hunt across the environment for the same IOCs (script name, task name, registry key, archive filenames) on other endpoints.
+- Notify HR/Legal and initiate an insider-threat investigation given the nature of the accessed data.
 
+### Long-term Remediations  
 
-
-### Long-term Remediations
-
-
+- Implement centralized, tamper-evident log forwarding (SIEM) with alerting on log-clearing commands (wevtutil cl).
+- Deploy UEBA/behavioral analytics to correlate recon → sensitive access → staging → egress-test → transfer sequences as a single incident.
+- Enforce MFA and conditional access policies on all remote session and administrative access paths.
+- Establish DLP policies with alerting on archive creation and bulk access involving HR/compensation data.
+- Build detection content correlating identical remote session device names across multiple hosts to catch lateral pivoting earlier in future incidents.
 
 ---
 
 **Report Status:** Complete  
 
-**Next Review:**  
+**Next Review:**  07-Febuary-2026
 
 **Distribution:** Cyber Range
