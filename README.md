@@ -14,6 +14,8 @@
 
 ## Executive Summary
 
+This threat hunt identified a multi-stage insider-driven data exfiltration event originating on endpoint **sys1-dept**, initiated via a remote interactive session from **192.168.0.110**. The actor executed a support-themed PowerShell script (`PayrollSupportTool.ps1`) to establish a foothold, performed host/user reconnaissance, and accessed sensitive year-end compensation files, including draft bonus matrices and finalized bonus artifacts. Collected data was staged into archive files, outbound network access was validated prior to transfer, and persistence was established through a user Run key and a scheduled task (`BonusReviewAssist`) to enable recurring access. The actor subsequently pivoted to a second endpoint, **main1-srvr**, using additional remote session contexts (`YE-HELPDESKTECH`, `YE-HRPLANNER`, `YE-FINANCEREVIE`) to access employee performance scorecards and finalized bonus data, consolidating this material into a second staged archive (`YearEnd_ReviewPackage_2025.zip`). The intrusion concluded with an outbound connection attempt to external IP **54.83.21.156**, alongside evidence of anti-forensic activity via clearing of PowerShell operational logs. The combination of privileged data access, staged archives, log clearing, and cross-host persistence indicates a deliberate, low-and-slow effort to collect and exfiltrate sensitive HR/compensation data.
+
 ---
 
 ## 1. Findings
@@ -403,12 +405,38 @@ DeviceNetworkEvents
 
 ## 2. Investigation Summary
 
+**Initial Access & Foothold (sys1-dept):** Activity tied to the relevant user context first appears on sys1-dept, initiated via a remote session sourced from 192.168.0.110. Shortly after session establishment, the actor executed:
+`powershell.exe -ExecutionPolicy Bypass -File C:\Users\5y51-D3p7\Downloads\PayrollSupportTool.ps1`
+This support-themed script, run from a user-writable directory, served as the initial execution vector.  
+**Discovery:** The actor's first reconnaissance action was whoami.exe /all, used to enumerate host, user, and privilege context immediately following script execution.  
+**Collection:** The first sensitive file accessed was BonusMatrix_Draft_v3.xlsx, a year-end bonus draft. This was followed by staging of collected data into an export/archive artifact (staging event referenced by file record 2533274790396713), confirming preparation for movement rather than incidental access.  
+**Command and Control / Exfiltration Validation:** Prior to any transfer attempt, the actor validated outbound network reachability at 2025-12-03T06:27:31.1857946Z, indicating deliberate staging of exfiltration capability ahead of data movement.  
+**Persistence:** Persistence was established through:  
+ * A Run key under `HKEY_CURRENT_USER\...\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
+ * A scheduled task named `BonusReviewAssist`, enabling recurring, unattended execution of the actor's tooling.
+**Lateral/Cross-Session Activity:** A separate remote session context, `YE-HELPDESKTECH`, was observed accessing an employee-related scorecard file. Later in the chain, a higher-privilege session context, `YE-HRPLANNER`, was tied to escalated activity, including access to employee performance review material at `2025-12-03T07:25:15.6288106Z` and a finalized, sensitive-classified bonus artifact at `2025-12-03T07:25:39.1653621Z`.
+**Staging and Exfiltration Attempt (sys1-dept):** A suspicious archive, `Q4Candidate_Pack.zip`, was created in the user's Documents directory. An outbound transfer attempt following this staging activity was confirmed at `2025-12-03T07:26:28.5959592Z`.
+**Anti-Forensics:** The actor attempted to clear local evidence via:
+'C:\Users\Main1-Srvr\Documents\InternalReferences\ArchiveBundles\YearEnd_ReviewPackage_2025.zip`
+Final-phase staging on this host occurred at 2025-12-04T03:15:29.2597235Z, culminating in an outbound connection attempt to external IP 54.83.21.156.
 
 ---
 
 ## 3. MITRE ATT&CK Mapping
 
-
+| Tactic              | Technique                                               | Evidence                                                                        |
+| ------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Initial Access      | Remote Services (T1021.001)                             | Remote session sourced from 192.168.0.110 establishing access on sys1-dept      |
+| Execution           | PowerShell (T1059.001)                                  | powershell.exe -ExecutionPolicy Bypass -File C:\Users\5y51-D3p7\Downloads\PayrollSupportTool.ps1 |
+| Discovery           | System Owner/User Discovery (T1033)                     | whoami.exe /all executed immediately after script run                           |
+| Collection          | Data from Local System (T1005)                          | Access to BonusMatrix_Draft_v3.xlsx, employee scorecards, and performance review material |
+| Collection          | Archive Collected Data (T1560)                          | Staging into export/archive artifact (record 2533274790396713); creation of Q4Candidate_Pack.zip and YearEnd_ReviewPackage_2025.zip |
+| Command and Control | Application Layer Protocol / Connectivity Check (T1071) | Outbound access test at 2025-12-03T06:27:31.1857946Z, prior to any transfer attempt |
+| Persistence         | Registry Run Keys (T1547.001)                           | HKEY_CURRENT_USER\S-1-5-21-805396643-3920266184-3816603331-500\SOFTWARE\Microsoft\Windows\CurrentVersion\Run |
+| Persistence         | Scheduled Task (T1053.005)                              | Scheduled task BonusReviewAssist created for recurring execution               |
+| Defense Evasion     | Indicator Removal: Clear Windows Event Logs (T1070.001) | wevtutil.exe cl Microsoft-Windows-PowerShell/Operational                       |
+| Lateral Movement    | Remote Services (T1021)                                 | Additional remote session contexts (YE-HELPDESKTECH, YE-HRPLANNER, YE-FINANCEREVIE) pivoting activity to main1-srvr |
+| Exfiltration        | Exfiltration Over C2/Alternative Protocol (T1041/T1048) | Outbound transfer attempts at 2025-12-03T07:26:28.5959592Z and final connection to external IP 54.83.21.156 |
 
 ---
 
